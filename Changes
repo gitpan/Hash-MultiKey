@@ -1,5 +1,11 @@
 Revision history for Perl extension Hash::MultiKey.
 
+0.04 Sat Mar 22 10:27:21 2003
+    - Authors' CPAN id were added
+    - Email changed to address in cpan.org
+    - THANKS section was added
+    - Typo in POD was fixed
+
 0.03 Fri Mar 21 22:03:28 2003
     - POD rewording
     - POD is more explicit about how keys work

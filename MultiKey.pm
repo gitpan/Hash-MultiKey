@@ -6,7 +6,8 @@ use warnings;
 
 use Carp;
 
-our $VERSION = '0.03';
+use vars qw($VERSION);
+$VERSION = '0.04';
 
 # ---[ Implementation Overview ]----------------------------------------
 #
@@ -153,7 +154,7 @@ equal, there is no need to use the same reference to refer to the same
 hash entry:
 
     $hmk{['foo', 'bar', 'baz']} = 1;
-    exists $hmk{['foo', 'bar', 'baz']} # different arrayref, but true
+    exists $hmk{['foo', 'bar', 'baz']}; # different arrayref, but true
 
 A given hash can have multi-keys of different lengths:
 
@@ -365,11 +366,17 @@ In such cases, Hash::MultiKey can help.
 
 =head1 AUTHORS
 
-Xavier Noria, Benjamin Goldberg.
+Xavier Noria (FXN), Benjamin Goldberg (GOLDBB).
+
+=head1 THANKS
+
+Iain Truskett (SPOON) kindly checked whether this module works in perl
+5.005 and found out the use of "/" in C<pack()>, introduced in perl
+5.006, prevented that.
 
 =head1 COPYRIGHT and LICENSE
 
-Copyright (C) 2003, Xavier Noria E<lt>fxn@hashref.comE<gt>. All rights
+Copyright (C) 2003, Xavier Noria E<lt>fxn@cpan.orgE<gt>. All rights
 reserved. This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 

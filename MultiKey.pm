@@ -7,7 +7,7 @@ use warnings;
 use Carp;
 
 use vars qw($VERSION);
-$VERSION = '0.04';
+$VERSION = '0.05';
 
 # ---[ Implementation Overview ]----------------------------------------
 #
@@ -372,7 +372,7 @@ Xavier Noria (FXN), Benjamin Goldberg (GOLDBB).
 
 Iain Truskett (SPOON) kindly checked whether this module works in perl
 5.005 and found out the use of "/" in C<pack()>, introduced in perl
-5.006, prevented that.
+5.006, prevents that.
 
 =head1 COPYRIGHT and LICENSE
 

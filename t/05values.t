@@ -36,7 +36,12 @@ is_deeply([values %hmk], \@vals, "values - all");
 
 # aliased values?
 $_ = 1 foreach values %hmk;
-is($_, 1, 'aliased value') foreach values %hmk;
+is($_, 1, 'aliased value (1)') foreach values %hmk;
+
+foreach $v (values %hmk) {
+    $v =~ s/1/2/g;
+}
+is($_, 2, 'aliased value (2)') foreach values %hmk;
 
 # initialize %hmk again
 $hmk{${"key$_"}} = ${"val$_"} foreach @idxs;

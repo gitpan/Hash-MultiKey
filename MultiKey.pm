@@ -4,305 +4,83 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 # ---[ Implementation Overview ]----------------------------------------
 #
-# This tied hash is implemented as kind of a tree.
+# The first implementation of this module was based in an explicit tree.
+# Right after its announcement in news:comp.lang.perl.modules Benjamin
+# Goldberg suggested a radically different approach, far much simple and
+# efficient. The current code is entirely based on his idea.
 #
-# The structure follows this pattern:
+# Multi-key hashes are implemented now with a plain hash. There is no
+# nesting involved.
 #
-#   $self->{tree}->{foo =>                   # node for key ["foo"]
-#                         [value,            # value at this node, if any
-#                          has_value,        # flag, for exists()
-#                          subtree,          # nested hashref
-#                          already_visited]} # flag, for tree walking
+# Lists of keys are converted to strings with pack():
 #
-# In the example above, if ["foo", "bar"] was a key of the tied hash
-# $self the hash under subtree would have "bar" as key, with its
-# corresponding arrayref. See how it works?
+#     $key = pack 'N' . ('w/a*' x @$keys), scalar(@$keys), @$keys;
 #
-# So it is basically a nested hash, only nesting has arrayrefs between
-# levels to allow values in any of the nodes. Those arrayrefs are
-# encapsulated in the private class Hash::MultiKey::Node you'll find at
-# the end of this file.
+# and that $key is what's used in the underlying hash. The first chunk
+# stores the number of keys, to be used afterwards when we decode it.
+# Then, pairs length_of_key/key follow.
 #
-# The current iterator of the hash is represented in a pair of arrayrefs
-# which are object attributes: the current key-chain, and the current
-# subtree-chain. This way in NEXTKEY we can go directly to the current
-# node.
+# Conversely, to retrieve the original list of keys from a real key we
+# use unpack():
+#
+#     $n = unpack 'N', $key;
+#     [ unpack 'x4' . ('w/a*' x $n), $key ];
+#
+# Iteration is delegated to the iterator of the very hash.
+#
+# Knowing that the following code is crystal clear, so comments have
+# been removed altogether.
 #
 # ----------------------------------------------------------------------
 
 
-# Construct a new hash.
 sub TIEHASH {
-    my ($class_or_obj) = @_;
-
-    my $self = {};
-    $self->{tree} = {};
-
-    return bless $self, ref $class_or_obj || $class_or_obj;
+    bless {}, shift;
 }
 
-
-# Clear the hash.
 sub CLEAR {
-    my ($self) = @_;
-
-    delete $self->{iter_keys};
-    delete $self->{iter_trees};
-    $self->{tree} = {};
+    %{ shift() } = ();
 }
 
-
-# Fetch value if key exists, or else return undef.
 sub FETCH {
     my ($self, $keys) = @_;
-
-    # syntactic sugar
     $keys = [$keys eq '' ? ('') : split /$;/, $keys, -1] unless ref $keys eq 'ARRAY';
-
-    # walk down the tree until the last but one node
-    my $tree = $self->{tree};
-    foreach my $key (@$keys[0..($#$keys-1)]) {
-        return undef unless exists $tree->{$key};
-        $tree = $tree->{$key}->tree;
-    }
-
-    my $last_key = $keys->[-1];
-    return exists $tree->{$last_key} ? $tree->{$last_key}->value : undef;
+    $self->{pack 'N' . ('w/a*' x @$keys), scalar(@$keys), @$keys};
 }
 
-
-# Store value under given key. Construct intermediate nodes as
-# needed. Return the very value (AFAIK not required, but recommended).
 sub STORE {
     my ($self, $keys, $value) = @_;
-
-    # syntactic sugar
     $keys = [$keys eq '' ? ('') : split /$;/, $keys, -1] unless ref $keys eq 'ARRAY';
-
-    # walk down the tree until the last but one node
-    my $tree = $self->{tree};
-    foreach my $key (@$keys[0..($#$keys-1)]) {
-        $tree->{$key} = Hash::MultiKey::Node->new unless exists $tree->{$key};
-        $tree = $tree->{$key}->tree;
-    }
-
-    my $last_key = $keys->[-1];
-    $tree->{$last_key} = Hash::MultiKey::Node->new unless exists $tree->{$last_key};
-    $tree->{$last_key}->value($value);
-
-    return $value; # recommended behaviour
+    $self->{pack 'N' . ('w/a*' x @$keys), scalar(@$keys), @$keys} = $value;
 }
 
-
-# If the key exists delete the corresponding entry and return its value.
-# Return undef otherwise.
-#
-# If the key exists, after deletion purge the tree as much as possible.
 sub DELETE {
     my ($self, $keys) = @_;
-
-    # syntactic sugar
     $keys = [$keys eq '' ? ('') : split /$;/, $keys, -1] unless ref $keys eq 'ARRAY';
-
-    # keep track of the path to purge the tree later, for all $i
-    # $keys_stack[$i] is the key chosen in tree $trees_stack[$i]
-    my @keys_stack  = ();
-    my @trees_stack = ();
-
-    # walk down the tree until the last but one node
-    my $tree = $self->{tree};
-    foreach my $key (@$keys[0..($#$keys-1)]) {
-        return undef unless exists $tree->{$key};
-        push @keys_stack, $key;
-        push @trees_stack, $tree;
-        $tree = $tree->{$key}->tree;
-    }
-
-    my $last_key = $keys->[-1];
-
-    return undef unless exists $tree->{$last_key};
-    return undef unless $tree->{$last_key}->has_value;
-
-    push @keys_stack, $last_key;
-    push @trees_stack, $tree;
-
-    my $rmed_value = $tree->{$last_key}->rm_value;
-
-    # purge the tree
-    while ($tree = pop @trees_stack) {
-        my $key  = pop @keys_stack;
-        last if %{$tree->{$key}->tree};
-        last if $tree->{$key}->has_value;
-        delete $tree->{$key};
-    }
-
-    return $rmed_value;
+    delete $self->{pack 'N' . ('w/a*' x @$keys), scalar(@$keys), @$keys};
 }
 
-
-# Return true if and only if the given key exists in the hash, no matter
-# its associated value.
 sub EXISTS {
     my ($self, $keys) = @_;
-
-    # syntactic sugar
     $keys = [$keys eq '' ? ('') : split /$;/, $keys, -1] unless ref $keys eq 'ARRAY';
-
-    # walk down the tree until the last but one node
-    my $tree = $self->{tree};
-    foreach my $key (@$keys[0..($#$keys-1)]) {
-        return undef unless exists $tree->{$key};
-        $tree = $tree->{$key}->tree;
-    }
-
-    my $last_key = $keys->[-1];
-    return exists $tree->{$last_key} && $tree->{$last_key}->has_value;
+    exists $self->{pack 'N' . ('w/a*' x @$keys), scalar(@$keys), @$keys};
 }
 
-
-# Reset all already_visited flags, and reset all iterators in nested
-# hashes.
-#
-# If the hash is empty return undef, otherwise return a copy of the
-# first key to be visited according to each().
 sub FIRSTKEY {
     my ($self) = @_;
-
-    $self->reset($self->{tree});
-
-    delete $self->{iter_keys};
-    delete $self->{iter_trees};
-
-    $self->firstkeys($self->{tree});
-
-    return exists $self->{iter_keys} ? [ @{$self->{iter_keys}} ] : undef;
+    keys %$self; # reset iterator
+    $self->NEXTKEY;
 }
 
-
-# Private: reset all already_visited flags.
-sub reset {
-    my ($self, $tree) = @_;
-
-    foreach my $node (values %$tree) {
-        $node->already_visited(0);
-        $self->reset($node->tree);
-    }
-}
-
-
-# Private: construct the first iteration node.
-sub firstkeys {
-    my ($self, $tree) = @_;
-
-    if (my ($key, $node) = each %$tree) {
-        push @{$self->{iter_keys}}, $key;
-        push @{$self->{iter_trees}}, $tree;
-        $self->firstkeys($node->tree) unless $node->has_value;
-    }
-}
-
-
-# Return a copy of the key-chain corresponding to the next node with
-# value in each() order. Return undef if we have exhausted the tree.
 sub NEXTKEY {
     my ($self) = @_;
-
-    while (@{$self->{iter_keys}}) {
-        my $current_key  = $self->{iter_keys}[-1];
-        my $current_tree = $self->{iter_trees}[-1];
-
-        # This provides support for deletion of the current key in
-        # each().
-        unless (exists $current_tree->{$current_key}) {
-            pop @{$self->{iter_keys}};
-            pop @{$self->{iter_trees}};
-            next;
-        }
-
-        my $current_node = $current_tree->{$current_key};
-
-        unless ($current_node->already_visited) {
-            # if $current_node has not been visited already we'll try to
-            # walk down the tree
-            if (my ($key_down, $node_down) = each %{$current_node->tree}) {
-                # go down a level if this node has a non-empty hash
-                push @{$self->{iter_keys}}, $key_down;
-                push @{$self->{iter_trees}}, $current_node->tree;
-                return [ @{$self->{iter_keys}} ] if $node_down->has_value;
-            } else {
-                # backtrack if there is an empty hash here
-                $current_node->already_visited(1);
-            }
-        } else {
-            # otherwise, we'll try to continue with next keys at this
-            # very level
-            if (my ($next_key, $next_node) = each %$current_tree) {
-                # inspect the next key in this hash
-                $self->{iter_keys}[-1] = $next_key;
-                return [ @{$self->{iter_keys}} ] if $next_node->has_value;
-            } else {
-                # this hash has been exhausted, go up
-                pop @{$self->{iter_keys}};
-                pop @{$self->{iter_trees}};
-                if (@{$self->{iter_keys}}) {
-                    $current_key  = $self->{iter_keys}[-1];
-                    $current_tree = $self->{iter_trees}[-1];
-                    $current_node = $current_tree->{$current_key};
-                    $current_node->already_visited(1);
-                }
-            }
-        }
-    }
-
-    return undef;
-}
-
-
-# Private: auxiliary class.
-package Hash::MultiKey::Node;
-
-sub new {
-    bless [undef, 0, {}, 0], shift;
-}
-
-sub value {
-    my $self  = shift;
-    if (@_) {
-        $self->[0] = shift;
-        $self->has_value(1);
-    }
-    $self->[0];
-}
-
-sub rm_value {
-    my ($self) = @_;
-    my $rmed_value = $self->[0];
-    $self->value(undef);
-    $self->has_value(0);
-    $rmed_value;
-}
-
-sub has_value {
-    my $self = shift;
-    $self->[1] = shift if @_;
-    $self->[1];
-}
-
-# No setter needed because the constructor initializes it and we work
-# always with the returned reference to modify it.
-sub tree {
-    my ($self) = @_;
-    $self->[2];
-}
-
-sub already_visited {
-    my $self = shift;
-    $self->[3] = shift if @_;
-    $self->[3];
+    defined(my $key = each %$self) or return;
+    my $n = unpack 'N', $key;
+    [ unpack 'x4' . ('w/a*' x $n), $key ];
 }
 
 1;
@@ -345,6 +123,7 @@ Hash::MultiKey - hashes whose keys can be multiple
 
   # values
   foreach $v (values %hmk) {
+      $v =~ s/foo/bar/g; # alias, modifies value in %hmk
       # ...
   }
 
@@ -383,7 +162,7 @@ Assignment is this easy:
 
     $hmk{['foo', 'bar', 'baz']} = 1;
 
-Different keys can have different lengths in the same array:
+Different keys can have different lengths in the same hash:
 
     $hmk{['zoo']} = 1;
 
@@ -418,7 +197,7 @@ As with everyday C<each()>, when called in list context returns a
 the hash, so that you can iterate over it. When called in scalar
 context, returns only the key for the next element in the hash.
 
-Remember keys are arrayrefs now:
+Remember keys are arrayrefs of strings here:
 
     while (($mk, $v) = each %hmk) {
         @keys = @$mk;
@@ -457,7 +236,7 @@ either the C<values()> or C<each()> function produces (given that the
 hash has not been modified). As a side effect, it resets hash's
 iterator.
 
-Remember keys are arrayrefs now:
+Remember keys are arrayrefs of strings here:
 
     foreach $mk (keys %hmk) {
         @keys = @$mk;
@@ -534,7 +313,7 @@ once it has been processed.
 You I<don't> need to split the string back while iterating with
 C<each()> or C<keys()>, it already comes as an arrayref of strings.
 
-Nevertheless take into account that this is B<slower> and B<broken> if
+Nevertheless take into account that this is B<slower>, and B<broken> if
 any of the components contains C<$;>. It is supported just for
 consistency's sake.
 
@@ -571,9 +350,9 @@ gratuitous, and implementation dependent constraint.
 
 In such cases, Hash::MultiKey can help.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Xavier Noria E<lt>fxn@hashref.comE<gt>.
+Xavier Noria, Benjamin Goldberg.
 
 =head1 COPYRIGHT and LICENSE
 

@@ -1,6 +1,9 @@
 Revision history for Perl extension Hash::MultiKey.
 
+0.02  Mon Mar 17 00:58:03 2003
+    - Implementation overview was rewritten
+    - Module was completely reimplemented
+
 0.01  Sat Mar  8 13:15:05 2003
 	- original version; created by h2xs 1.21 with options
 		-XA -n Hash::MultiKey
-

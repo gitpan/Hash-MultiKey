@@ -22,8 +22,8 @@ $val4 = ['array', 'ref'];
 $val5 = {hash => 'ref', with => 'two', keys => undef};
 $val6 = \7;
 
-# initialize %hmk
-$hmk{join $;, @{"key$_"}} = ${"val$_"} foreach @idxs;
+# initialize %hmk, check value returned by STORE as well
+is_deeply($hmk{join $;, @{"key$_"}} = ${"val$_"}, ${"val$_"}, 'storing') foreach @idxs;
 
 # positive exists
 ok(exists $hmk{join $;, @{"key$_"}}, "exists key $_") foreach @idxs;

@@ -24,8 +24,8 @@ $val5 = {hash => 'ref', with => 'two', keys => undef};
 $val6 = \7;
 $val7 = undef;
 
-# initialize %hmk
-$hmk{${"key$_"}} = ${"val$_"} foreach @idxs;
+# initialize %hmk, check value returned by STORE as well
+is_deeply($hmk{${"key$_"}} = ${"val$_"}, ${"val$_"}, 'storing') foreach @idxs;
 
 # fetch values
 is_deeply($hmk{${"key$_"}}, ${"val$_"}, "fetch key $_") foreach @idxs;

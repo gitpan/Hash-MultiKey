@@ -7,5 +7,5 @@ WriteMakefile(
     'PREREQ_PM'		=> {'Test::More' => 0}, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM => 'MultiKey.pm', # retrieve abstract from module
-       AUTHOR        => 'Xavier Noria <fxn@hashref.com>') : ()),
+       AUTHOR        => 'Xavier Noria, Benjamin Goldberg') : ()),
 );

@@ -4,7 +4,9 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+use Carp;
+
+our $VERSION = '0.03';
 
 # ---[ Implementation Overview ]----------------------------------------
 #
@@ -49,24 +51,28 @@ sub CLEAR {
 sub FETCH {
     my ($self, $keys) = @_;
     $keys = [$keys eq '' ? ('') : split /$;/, $keys, -1] unless ref $keys eq 'ARRAY';
+    @$keys or croak "Empty multi-key\n";
     $self->{pack 'N' . ('w/a*' x @$keys), scalar(@$keys), @$keys};
 }
 
 sub STORE {
     my ($self, $keys, $value) = @_;
     $keys = [$keys eq '' ? ('') : split /$;/, $keys, -1] unless ref $keys eq 'ARRAY';
+    @$keys or croak "Empty multi-key\n";
     $self->{pack 'N' . ('w/a*' x @$keys), scalar(@$keys), @$keys} = $value;
 }
 
 sub DELETE {
     my ($self, $keys) = @_;
     $keys = [$keys eq '' ? ('') : split /$;/, $keys, -1] unless ref $keys eq 'ARRAY';
+    @$keys or croak "Empty multi-key\n";
     delete $self->{pack 'N' . ('w/a*' x @$keys), scalar(@$keys), @$keys};
 }
 
 sub EXISTS {
     my ($self, $keys) = @_;
     $keys = [$keys eq '' ? ('') : split /$;/, $keys, -1] unless ref $keys eq 'ARRAY';
+    @$keys or croak "Empty multi-key\n";
     exists $self->{pack 'N' . ('w/a*' x @$keys), scalar(@$keys), @$keys};
 }
 
@@ -107,7 +113,6 @@ Hash::MultiKey - hashes whose keys can be multiple
 
   # exists
   exists $hmk{['foo', 'bar', 'baz']}; # true
-  exists $hmk{['foo', 'bar']};        # false
 
   # each
   while (($mk, $v) = each %hmk) {
@@ -141,7 +146,23 @@ Hash::MultiKey - hashes whose keys can be multiple
 
 =head1 DESCRIPTION
 
-Hash::MultiKey provides true multi-key hashes.
+Hash::MultiKey provides hashes that accept arrayrefs of strings as keys.
+
+Two multi-keys are regarded as being equal if their I<contents> are
+equal, there is no need to use the same reference to refer to the same
+hash entry:
+
+    $hmk{['foo', 'bar', 'baz']} = 1;
+    exists $hmk{['foo', 'bar', 'baz']} # different arrayref, but true
+
+A given hash can have multi-keys of different lengths:
+
+    $hmk{['foo']}               = 1; # length 1
+    $hmk{['foo', 'bar', 'baz']} = 3; # length 3, no problem
+
+In addition, multi-keys cannot be empty:
+
+    $hmk{[]} = 1; # ERROR
 
 The next sections document how hash-related operations work in a
 multi-key hash. Some parts have been copied from standard documentation,
@@ -151,7 +172,7 @@ since everything has standard semantics.
 
 Once you have tied a hash variable to Hash::MultiKey as in
 
-    tie %hmk, 'Hash::MultiKey';
+    tie my (%hmk), 'Hash::MultiKey';
 
 you've got a hash whose keys are arrayrefs of strings. Having that in
 mind everything works as expected.
@@ -162,19 +183,11 @@ Assignment is this easy:
 
     $hmk{['foo', 'bar', 'baz']} = 1;
 
-Different keys can have different lengths in the same hash:
-
-    $hmk{['zoo']} = 1;
-
 =head2 fetch
 
-The arrayrefs used for retrieving need I<not> be the same ones used for
-storing:
+So is fetching:
 
-    $v = $hmk{['foo', 'bar', 'baz']}; # $v is 1
-
-In general, when you work with these hashes the idea is that two keys
-are regarded as being equal if and only if their I<contents> are equal.
+    $v = $hmk{['foo', 'bar', 'baz']};
 
 =head2 exists
 
@@ -186,7 +199,7 @@ Only whole multi-keys as they were used in assigments have entries.
 Sub-chains do not exist unless they were assigned some value.
 
 For instance, C<['foo']> is a sub-chain of C<['foo', 'bar', 'baz']>, but
-since it has no entry in %hmk so far
+if it has no entry in %hmk so far
 
     exists $hmk{['foo']}; # false
 

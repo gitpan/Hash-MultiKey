@@ -1,36 +1,37 @@
 # -*- Mode: CPerl -*-
 
+use strict;
+use warnings;
+
 use Test::More 'no_plan';
 
 use Hash::MultiKey;
 
-tie %hmk, 'Hash::MultiKey';
+tie my (%hmk), 'Hash::MultiKey';
 
-@idxs = 1..6;
+my @mk = (["foo"],
+          ["foo", "bar", "baz"],
+          ["foo", "bar", "baz", "zoo"],
+          ["goo"],
+          ["goo", "car", "caz"],
+          ["goo", "car", "caz", "aoo"],);
 
-@key1 = ("foo");
-@key2 = ("foo", "bar", "baz");
-@key3 = ("foo", "bar", "baz", "zoo");
-@key4 = ("goo");
-@key5 = ("goo", "car", "caz");
-@key6 = ("goo", "car", "caz", "aoo");
-
-$val1 = undef;
-$val2 = 1;
-$val3 = 'string';
-$val4 = ['array', 'ref'];
-$val5 = {hash => 'ref', with => 'two', keys => undef};
-$val6 = \7;
+my @v = (undef,
+         1,
+         'string',
+         ['array', 'ref'],
+         {hash => 'ref', with => 'three', keys => undef},
+         \7,);
 
 # initialize %hmk
-$hmk{join $;, @{"key$_"}} = ${"val$_"} foreach @idxs;
+$hmk{[join $;, @{$mk[$_]}]} = $v[$_] foreach 0..$#mk;
 
 # delete all
-foreach $i (@idxs) {
+foreach my $i (0..$#mk) {
     # delete must return the element being removed if it exists
-    is_deeply(delete $hmk{join $;, @{"key$i"}}, ${"val$i"}, "delete key $i");
-    ok(!exists $hmk{join $;, @{"key$i"}}, "! exists key $i");
+    is_deeply(delete $hmk{[join $;, @{$mk[$i]}]}, $v[$i], "delete key $i");
+    ok(!exists $hmk{[join $;, @{$mk[$i]}]}, "! exists key $i");
 }
 
 # delete must return undef on non-existent entries
-ok(!defined $hmk{zoo}, 'delete non-existent entries');
+ok(!defined $hmk{'zoo'}, 'delete non-existent entries');

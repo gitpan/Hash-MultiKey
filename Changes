@@ -1,5 +1,13 @@
 Revision history for Perl extension Hash::MultiKey.
 
+0.03 Fri Mar 21 22:03:28 2003
+    - POD rewording
+    - POD is more explicit about how keys work
+    - Added 17croak.t
+    - Calls to croak() if key is [] were added
+    - @mk notation in tests and documentation was unified
+    - Tests use strict, warnings, and data structures instead of symrefs
+
 0.02  Mon Mar 17 00:58:03 2003
     - Implementation overview was rewritten
     - Module was completely reimplemented

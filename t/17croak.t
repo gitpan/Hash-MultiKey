@@ -28,12 +28,20 @@ my @v = (undef,
 # initialize %hmk
 $hmk{$mk[$_]} = $v[$_] foreach 0..$#mk;
 
-# delete all
-foreach my $i (0..$#mk) {
-    # delete must return the element being removed if it exists
-    is_deeply(delete $hmk{$mk[$i]}, $v[$i], "delete key $i");
-    ok(!exists $hmk{$mk[$i]}, "! exists key $i");
-}
+# fetch
+eval { my $dummy = $hmk{[]} };
+ok($@, 'fetch');
 
-# delete must return undef on non-existent entries
-ok(!defined $hmk{['zoo']}, 'delete non-existent entries');
+# store
+eval { $hmk{[]} = 0 };
+ok($@, 'store');
+
+# delete
+eval { delete $hmk{[]} };
+ok($@, 'delete');
+
+# exists
+eval { exists $hmk{[]} };
+ok($@, 'exists');
+
+

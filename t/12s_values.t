@@ -1,52 +1,52 @@
 # -*- Mode: CPerl -*-
 
-use Test::More 'no_plan';
+use strict;
+use warnings;
 
-use Data::Dumper;
+use Test::More 'no_plan';
 
 use Hash::MultiKey;
 
-tie %hmk, 'Hash::MultiKey';
+tie my (%hmk), 'Hash::MultiKey';
 
-@idxs = 1..6;
+my @mk = (["foo"],
+          ["foo", "bar", "baz"],
+          ["foo", "bar", "baz", "zoo"],
+          ["goo"],
+          ["goo", "car", "caz"],
+          ["goo", "car", "caz", "aoo"],);
 
-@key1 = ("foo");
-@key2 = ("foo", "bar", "baz");
-@key3 = ("foo", "bar", "baz", "zoo");
-@key4 = ("goo");
-@key5 = ("goo", "car", "caz");
-@key6 = ("goo", "car", "caz", "aoo");
-
-$val1 = undef;
-$val2 = 1;
-$val3 = 'string';
-$val4 = ['array', 'ref'];
-$val5 = {hash => 'ref', with => 'two', keys => undef};
-$val6 = \7;
+my @v = (undef,
+         1,
+         'string',
+         ['array', 'ref'],
+         {hash => 'ref', with => 'three', keys => undef},
+         \7,);
 
 # initialize %hmk
-$hmk{join $;, @{"key$_"}} = ${"val$_"} foreach @idxs;
+$hmk{[join $;, @{$mk[$_]}]} = $v[$_] foreach 0..$#mk;
 
 # values must be returned in the same order as keys reports their
 # corresponding keys
-push @vals, $hmk{$_} foreach keys %hmk;
-is_deeply([values %hmk], \@vals, "values - all");
+my @v_in_keys_order = ();
+push @v_in_keys_order, $hmk{$_} foreach keys %hmk;
+is_deeply([values %hmk], \@v_in_keys_order, "values - all");
 
 # aliased values?
 $_ = 1 foreach values %hmk;
 is($_, 1, 'aliased value') foreach values %hmk;
 
-foreach $v (values %hmk) {
+foreach my $v (values %hmk) {
     $v =~ s/1/2/g;
 }
 is($_, 2, 'aliased value (2)') foreach values %hmk;
 
 # initialize %hmk again
-$hmk{join $;, @{"key$_"}} = ${"val$_"} foreach @idxs;
+$hmk{[join $;, @{$mk[$_]}]} = $v[$_] foreach 0..$#mk;
 
-foreach $i (@idxs) {
-    delete $hmk{join $;, @{"key$_"}};
-    @vals = ();
-    push @vals, $hmk{$_} foreach keys %hmk;
-    is_deeply([values %hmk], \@vals, "values - all");
+foreach my $i (0..$#mk) {
+    delete $hmk{[join $;, @{$mk[$i]}]};
+    @v_in_keys_order = ();
+    push @v_in_keys_order, $hmk{$_} foreach keys %hmk;
+    is_deeply([values %hmk], \@v_in_keys_order, 'values - all');
 }

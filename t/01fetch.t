@@ -1,33 +1,34 @@
 # -*- Mode: CPerl -*-
 
+use strict;
+use warnings;
+
 use Test::More 'no_plan';
 
 BEGIN { use_ok('Hash::MultiKey') }
 
-tie %hmk, 'Hash::MultiKey';
+tie my (%hmk), 'Hash::MultiKey';
 
-@idxs = 1..7;
+my @mk = (["foo"],
+          ["foo", "bar", "baz"],
+          ["foo", "bar", "baz", "zoo"],
+          ["goo"],
+          ["goo", "car", "caz"],
+          ["goo", "car", "caz", "aoo"],
+          ["branch", "with", "no", "bifur$;ations"],);
 
-$key1 = ["foo"];
-$key2 = ["foo", "bar", "baz"];
-$key3 = ["foo", "bar", "baz", "zoo"];
-$key4 = ["goo"];
-$key5 = ["goo", "car", "caz"];
-$key6 = ["goo", "car", "caz", "aoo"];
-$key7 = ["branch", "with", "no", "bifur$;ations"];
-
-$val1 = undef;
-$val2 = 1;
-$val3 = 'string';
-$val4 = ['array', 'ref'];
-$val5 = {hash => 'ref', with => 'two', keys => undef};
-$val6 = \7;
-$val7 = undef;
+my @v = (undef,
+         1,
+         'string',
+         ['array', 'ref'],
+         {hash => 'ref', with => 'three', keys => undef},
+         \7,
+         undef,);
 
 # initialize %hmk, check value returned by STORE as well
-is_deeply($hmk{${"key$_"}} = ${"val$_"}, ${"val$_"}, 'storing') foreach @idxs;
+is_deeply($hmk{$mk[$_]} = $v[$_], $v[$_], 'storing') foreach 0..$#mk;
 
 # fetch values
-is_deeply($hmk{${"key$_"}}, ${"val$_"}, "fetch key $_") foreach @idxs;
+is_deeply($hmk{$mk[$_]}, $v[$_], "fetch key $_") foreach 0..$#mk;
 
 

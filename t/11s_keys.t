@@ -1,38 +1,39 @@
 # -*- Mode: CPerl -*-
 
+use strict;
+use warnings;
+
 use Test::More 'no_plan';
 
 use Hash::MultiKey;
 
-tie %hmk, 'Hash::MultiKey';
+tie my (%hmk), 'Hash::MultiKey';
 
-@idxs = 1..6;
+my @mk = (["foo"],
+          ["foo", "bar", "baz"],
+          ["foo", "bar", "baz", "zoo"],
+          ["goo"],
+          ["goo", "car", "caz"],
+          ["goo", "car", "caz", "aoo"],);
 
-@key1 = ("foo");
-@key2 = ("foo", "bar", "baz");
-@key3 = ("foo", "bar", "baz", "zoo");
-@key4 = ("goo");
-@key5 = ("goo", "car", "caz");
-@key6 = ("goo", "car", "caz", "aoo");
-
-$val1 = undef;
-$val2 = 1;
-$val3 = 'string';
-$val4 = ['array', 'ref'];
-$val5 = {hash => 'ref', with => 'two', keys => undef};
-$val6 = \7;
+my @v = (undef,
+         1,
+         'string',
+         ['array', 'ref'],
+         {hash => 'ref', with => 'three', keys => undef},
+         \7,);
 
 # initialize %hmk
-$hmk{join $;, @{"key$_"}} = ${"val$_"} foreach @idxs;
+$hmk{[join $;, @{$mk[$_]}]} = $v[$_] foreach 0..$#mk;
 
 # all returned keys exists
 ok(exists $hmk{$_}, "exists - all keys") foreach keys %hmk;
 
 # in scalar context we get the number of keys
-is(scalar(keys %hmk), scalar(@idxs), "number of keys - all keys");
+is(scalar(keys %hmk), scalar(@mk), "number of keys - all keys");
 
-foreach $i (@idxs) {
-    delete $hmk{join $;, @{"key$i"}};
+foreach my $i (0..$#mk) {
+    delete $hmk{[join $;, @{$mk[$i]}]};
     ok(exists $hmk{$_}, "exists - $i") foreach keys %hmk;
-    is(scalar(keys %hmk), @idxs - $i, "number of keys - $i");
+    is(scalar(keys %hmk), $#mk - $i, "number of keys - $i");
 }

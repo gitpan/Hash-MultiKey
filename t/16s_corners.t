@@ -1,33 +1,34 @@
 # -*- Mode: CPerl -*-
 
+use strict;
+use warnings;
+
 use Test::More 'no_plan';
 
 use Hash::MultiKey;
 
-tie %hmk, 'Hash::MultiKey';
+tie my (%hmk), 'Hash::MultiKey';
 
-@idxs = 1..4;
+my @mk = ([""],
+          ["", "", ""],
+          ["", "", "", ""],
+          ["", "", "", "", "", ""],);
 
-@key1 = ("");
-@key2 = ("", "", "");
-@key3 = ("", "", "", "");
-@key4 = ("", "", "", "", "", "");
-
-$val1 = undef;
-$val2 = 1;
-$val3 = 'string';
-$val4 = ['array', 'ref'];
+my @v = (undef,
+         1,
+         'string',
+         ['array', 'ref'],);
 
 # initialize %hmk
-$hmk{join $;, @{"key$_"}} = ${"val$_"} foreach @idxs;
+$hmk{[join $;, @{$mk[$_]}]} = $v[$_] foreach 0..$#mk;
 
 # fetch values
-is_deeply($hmk{join $;, @{"key$_"}}, ${"val$_"}, "fetch key $_") foreach @idxs;
+is_deeply($hmk{[join $;, @{$mk[$_]}]}, $v[$_], "fetch key $_") foreach 0..$#mk;
 
 # delete all
-foreach $i (@idxs) {
-    is_deeply(delete $hmk{join $;, @{"key$i"}}, ${"val$i"}, "delete key $i");
-    ok(!exists $hmk{join $;, @{"key$i"}}, "! exists key $i");
+foreach my $i (0..$#mk) {
+    is_deeply(delete $hmk{[join $;, @{$mk[$i]}]}, $v[$i], "delete key $i");
+    ok(!exists $hmk{[join $;, @{$mk[$i]}]}, "! exists key $i");
 }
 
 is(scalar(%hmk), 0, 'scalar empty %hmk');

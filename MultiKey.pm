@@ -7,7 +7,7 @@ use warnings;
 use Carp;
 
 use vars qw($VERSION);
-$VERSION = '0.05';
+$VERSION = '0.06';
 
 # ---[ Implementation Overview ]----------------------------------------
 #
@@ -88,6 +88,11 @@ sub NEXTKEY {
     defined(my $key = each %$self) or return;
     my $n = unpack 'N', $key;
     [ unpack 'x4' . ('w/a*' x $n), $key ];
+}
+
+sub SCALAR {
+    my ($self) = @_;
+    scalar %$self;
 }
 
 1;
@@ -373,6 +378,9 @@ Xavier Noria (FXN), Benjamin Goldberg (GOLDBB).
 Iain Truskett (SPOON) kindly checked whether this module works in perl
 5.005 and found out the use of "/" in C<pack()>, introduced in perl
 5.006, prevents that.
+
+Philip Monsen reported some tests of Hash::MultiKey 0.05 failed with
+perl 5.8.4.
 
 =head1 COPYRIGHT and LICENSE
 

@@ -31,4 +31,4 @@ foreach my $i (0..$#mk) {
     ok(!exists $hmk{[join $;, @{$mk[$i]}]}, "! exists key $i");
 }
 
-is(scalar(%hmk), 0, 'scalar empty %hmk');
+ok(!scalar(%hmk), 'scalar empty %hmk');

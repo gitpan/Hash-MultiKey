@@ -30,5 +30,5 @@ $hmk{[join $;, @{$mk[$_]}]} = $v[$_] foreach 0..$#mk;
 %hmk = ();
 is(scalar(keys %hmk), 0, 'clear - keys');
 is(scalar(values %hmk), 0, 'clear - values');
-is(scalar(%hmk), 0, 'clear - hash');
+ok(!scalar(%hmk), 'clear - hash');
 eq_array([%hmk], [], 'clear - flatten');

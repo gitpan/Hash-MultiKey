@@ -1,5 +1,9 @@
 Revision history for Perl extension Hash::MultiKey.
 
+0.06 Wed Jul  7 23:42:41 2004
+    - Added SCALAR, introduced in 5.8.3.
+    - scalar(%hmk) was not being tested properly, fixed.
+
 0.05 Wed Mar 26 20:41:06 2003
     - Typo in POD was corrected
 

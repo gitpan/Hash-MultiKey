@@ -20,3 +20,4 @@ t/14s_clear.t
 t/15corners.t
 t/16s_corners.t
 t/17croak.t
+META.yml                                 Module meta-data (added by MakeMaker)
